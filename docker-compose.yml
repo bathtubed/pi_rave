@@ -1,0 +1,32 @@
+version: '2'
+
+volumes:
+  portainer_data:
+
+networks:
+  ros:
+    driver: bridge
+
+services:
+  portainer:
+    image: portainer/portainer:arm
+    volumes:
+      - "portainer_data:/data"
+    network_mode: "host"
+    labels:
+      io.balena.features.balena-socket: true
+    restart: always
+  
+  mosquitto:
+    image: eclipse-mosquitto
+    hostname: mosquitto
+    expose:
+      - "1883"
+      - "9001"
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+  
+  sensor:
+    build: ./sensor
+    hostname: sensor
