@@ -69,9 +69,10 @@ def colorWipe(strip, color, wait_ms=50):
     for i in range(strip.numPixels()):
         strip.setPixelColor(i, color)
         strip.show()
-    time.sleep(wait_ms/1000.0)
+        time.sleep(wait_ms/1000.0)
 
 if __name__ == '__main__':
+    print("hello chernl")
     # broker_address = "192.168.1.72"
 
     # client = mqtt.Client("P1")
@@ -90,10 +91,15 @@ if __name__ == '__main__':
     strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, LED_FREQ_HZ, LED_DMA, LED_INVERT, LED_BRIGHTNESS, LED_CHANNEL)
     strip.begin()
 
+    print("red")
     colorWipe(strip, Color(255, 0, 0))  # Red wipe
+    print("blue")
     colorWipe(strip, Color(0, 255, 0))  # Blue wipe
+    print("green")
     colorWipe(strip, Color(0, 0, 255)) # Green wipe
+    print("off")
     colorWipe(strip, Color(0,0,0), 10) #turn off
+    print("finish")
 
     # data_queues = {"sub-bass":Queue(),
     #                "bass":Queue(),

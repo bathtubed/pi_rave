@@ -1,7 +1,7 @@
-FROM balenalib/raspberrypi3-debian-python
+FROM balenalib/raspberry-pi-debian-python
 
-RUN apt-get && \
-	apt-get install pip3 && \
+RUN apt-get update && \
+	apt-get install python3-pip && \
 	pip3 install rpi_ws281x paho-mqtt && \
 	apt-get clean && rm -rf /var/lib/apt/lists/*
 
@@ -9,4 +9,6 @@ WORKDIR /usr/src/app
 
 ENV INITSYSTEM on
 
-CMD ["bash", "python3 LED_control.py"]
+COPY ./ .
+
+CMD python3 LED_control.py
