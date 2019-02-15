@@ -175,8 +175,8 @@ private:
 	// DATA
 	storage_type data_;
 	size_type capacity_;
-	size_type start_;
-	size_type stop_;
+	volatile size_type start_;
+	volatile size_type stop_;
 	
 public:
 	circular_queue(size_type buf_size):
@@ -211,12 +211,22 @@ public:
 	value_type pop_front();
 	
 private:
-	size_type& shift_right(size_type& i, size_type len = 1) const
+	size_type shift_right(size_type& i, size_type len = 1) const
 	{
 		return i = (i+len) % capacity();
 	}
 	
-	void shift_left(size_type& i, size_type len = 1) const
+	size_type shift_right(volatile size_type& i, size_type len = 1) const
+	{
+		return i = (i+len) % capacity();
+	}
+	
+	size_type shift_left(size_type& i, size_type len = 1) const
+	{
+		return shift_right(i, -len);
+	}
+	
+	size_type shift_left(volatile size_type& i, size_type len = 1) const
 	{
 		return shift_right(i, -len);
 	}
