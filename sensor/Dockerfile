@@ -1,14 +1,25 @@
 FROM balenalib/raspberrypi3-debian-python
 
-RUN apt-get update && \
-	apt-get install -yq build-essential libmosquittopp-dev libmosquitto-dev && \
-	apt-get clean && rm -rf /var/lib/apt/lists/*
+COPY ./firmware/hardfp/opt/vc /opt
 
+RUN apt-get update && \
+	apt-get install -yq build-essential libmosquittopp-dev libmosquitto-dev git && \
+	apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app
 
-COPY . ./
+RUN git clone git://git.drogon.net/wiringPi && \
+	cd wiringPi && \
+	git pull origin && \
+	WIRINGPI_SUDO=env ./build && \
+	cd ..
+
+
+COPY start.sh ./start.sh
+
+COPY ./sense ./sense
+
+RUN cd sense && make install && make clean && cd ..
 
 ENV INITSYSTEM on
-
-CMD ["bash"]
+CMD ["bash", "start.sh"]
