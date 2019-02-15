@@ -1,33 +1,26 @@
 #include "hardware.h"
 
 #include <wiringPi.h>
+#include <wiringPiSPI.h>
 
 #include <stdexcept>
 
 constexpr auto spi_rate = 1000000;
 
-namespace // anonymous
+hardware::hardware(pin_t led_pin, pin_t mic_pin, pin_t adc_cs):
+	led_pin_(led_pin), mic_pin_(mic_pin), adc_cs_(adc_cs)
 {
-
-class setup_wiringpi
-{
-	static setup_wiringpi s;
-	
-	setup_wiringpi()
+	if(wiringPiSetupGpio() < 0)
 	{
-		wiringPiSetupGpio();
+		throw std::runtime_error("Setup of wiringPi failed");
 	}
-};
-
-} // anonymous
-
-hardware::hardware(pin_t blink_pin, pin_t adc_cs):
-	blink_pin_(blink_pin), adc_cs_(adc_cs)
-{
+	
 	if(wiringPiSPISetup(adc_cs_, 1000000) < 0)
 	{
 		throw std::runtime_error("Setup of SPI failed");
 	}
+	
+	pinMode(led_pin_, PWM_OUTPUT);
 }
 
 short hardware::readadc(pin_t a)
@@ -37,7 +30,7 @@ short hardware::readadc(pin_t a)
 	
 	unsigned char buffer[3] = {1}; // start bit
 	buffer[1] = a << 4;
-	wiringPiSPIDataRW(spiChannel, buffer, sizeof(buffer));
+	wiringPiSPIDataRW(adc_cs_, buffer, sizeof(buffer));
 	
 	return ( uint16_t(buffer[1] & 3) << 8 ) | buffer[2]; // get last 10 bits
 }
@@ -52,13 +45,11 @@ void hardware::sample(short* buffer,
 
 hardware::~hardware()
 {
-	digitalWrite(blink_pin_, 0);
+	pinMode(led_pin_, OUTPUT);
+	digitalWrite(led_pin_, 0);
 }
 
-void hardware::blink()
+void hardware::set_led(short brightness)
 {
-	digitalWrite(blink_pin_, 1);
-	delay(100);
-	digitalWrite(blink_pin_, 0);
-	delay(100);
+	pwmWrite(led_pin_, brightness);
 }

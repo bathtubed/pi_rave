@@ -11,16 +11,16 @@ else
 endif
 
 ifdef NONRPI
-  LIBS = -lm -lmosquitto -lmosquittopp -lpthread
+  LIBS = -lfftw3 -lm -lmosquitto -lmosquittopp -lpthread
 else
-  LIBS = -lwiringPi -lmosquitto -lmosquittopp -lrt -lm -lpthread -lbcm_host -Wl,-rpath=/opt/vc/lib
+  LIBS = -lwiringPi -lmosquitto -lmosquittopp -lrt -lfftw3 -lm -lpthread -Wl,-rpath=/opt/vc/lib
 endif
 
-COMMON_SOURCES=
+COMMON_SOURCES=circular_queue.cpp
 ifdef NONRPI
-  SOURCES=$(COMMON_SOURCES) offline_main.cpp circular_queue.cpp
+  SOURCES=$(COMMON_SOURCES) offline_main.cpp fft.cpp
 else
-  SOURCES=$(COMMON_SOURCES) main.cpp hardware.cpp circular_queue.cpp
+  SOURCES=$(COMMON_SOURCES) main.cpp hardware.cpp
 endif
 
 BUILD_DIR=build
@@ -37,7 +37,7 @@ EXE_FILE=$(BUILD_DIR)/$(EXE)
 all: $(EXE_FILE)
 
 $(EXE_FILE): $(OBJS)
-	$(CXX) -o $@ $< $(LIBS) $(CXXFLAGS)
+	$(CXX) -o $@ $(OBJS) $(LIBS) $(CXXFLAGS)
 
 build:
 	mkdir build

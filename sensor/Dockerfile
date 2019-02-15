@@ -1,9 +1,10 @@
-FROM balenalib/raspberrypi3-debian-python
+FROM balenalib/raspberry-pi-debian-python
 
 COPY ./firmware/hardfp/opt/vc /opt
 
 RUN apt-get update && \
-	apt-get install -yq build-essential libmosquittopp-dev libmosquitto-dev git && \
+	apt-get install -yq build-essential git \
+		libmosquittopp-dev libmosquitto-dev fftw-dev && \
 	apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app
