@@ -1,10 +1,10 @@
-FROM balenalib/raspberry-pi-debian-python
+FROM balenalib/%%BALENA_MACHINE_NAME%%-debian-python
 
 COPY ./firmware/hardfp/opt/vc /opt
 
 RUN apt-get update && \
 	apt-get install -yq build-essential git \
-		libmosquittopp-dev libmosquitto-dev fftw-dev && \
+		libmosquittopp-dev libmosquitto-dev libfftw3-dev && \
 	apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app

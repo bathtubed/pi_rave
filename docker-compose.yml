@@ -3,10 +3,6 @@ version: '2'
 volumes:
   portainer_data:
 
-networks:
-  ros:
-    driver: bridge
-
 services:
   portainer:
     image: portainer/portainer:arm
@@ -15,7 +11,7 @@ services:
     network_mode: "host"
     labels:
       io.balena.features.balena-socket: true
-    restart: always
+    #restart: always
   
   mosquitto:
     image: eclipse-mosquitto
@@ -29,5 +25,14 @@ services:
   
   sensor:
     build: ./sensor
+    depends_on: [mosquitto]
     hostname: sensor
     privileged: true
+    restart: always
+  
+  leds:
+    build: ./led
+    depends_on: [mosquitto]
+    hostname: led
+    privileged: true
+    restart: always

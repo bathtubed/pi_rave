@@ -14,54 +14,70 @@ namespace transform_types
 		void operator()(void* p) const {fftw_free(p);}
 	};
 	
-	using prec_t = double;
-	using samp_t = std::complex<prec_t>;
-	using data_t = std::unique_ptr<samp_t[], fftw_data_deleter>;
+	using samp_t = double;
+	using freq_t = std::complex<prec_t>;
+	
+	template<typename T>
+	using data_t = std::unique_ptr<T[], fftw_data_deleter>;
 };
 
-class transform: public transform_types::data_t
+template<typename T>
+class transform: public transform_types::data_t<T>
 {
 public:
-	using prec_t = transform_types::prec_t;
-	using samp_t = transform_types::samp_t;
-	using data_t = transform_types::data_t;
+	using value_type = T;
+	using data_t = transform_types::data_t<T>;
 	
 private:
 	// DATA
 	unsigned len_;
 	
 public:
-	transform(unsigned len): len_(len) {}
+	transform(unsigned len);
 	
 public:
 	samp_t* begin() {return get();}
 	samp_t* end() {return get() + len_;}
 	
 	const samp_t* begin() const {return get();}
-	const samp_t* end() const {return get();}
+	const samp_t* end() const {return get() + len_;}
 };
+
+template<>
+transform<transform_types::samp_t>::transform(unsigned len):
+	data_t(fftw_alloc_real(len)), len_(len) {}
+
+
+template<>
+transform<transform_types::freq_t>::transform(unsigned len):
+	data_t(reinterpret_cast<freq_t*>(fftw_alloc_complex(len))), len_(len) {}
+
+using time_domain = transform<transform_types::samp_t>;
+using freq_domain = transform<transform_types::freq_t>;
 
 class fft_plan
 {
 private:
 	size_t n_;
-	transform buf_in_, buf_out_;
+	time_domain buf_in_;
+	freq_domain buf_out_;
 	fftw_plan plan_;
 	
 public:
 	fft_plan(size_t n, bool estimate = false):
-		n_(n), buf_in_(n_), buf_out_(n_), plan_(generate_plan(estimate)) {}
+		n_(n), buf_in_(n_), buf_out_(n_/2+1), plan_(generate_plan(estimate)) {}
 	
 	~fft_plan() {fftw_destroy_plan(plan_);}
 	
 public:
 	fftw_plan generate_plan(bool estimate = false) const
 	{
-		return fftw_plan_dft_1d(
+		return fftw_plan_dft_r2c_1d(
 			n_, 
 			reinterpret_cast<fftw_complex*>(buf_in_.get()),
 			reinterpret_cast<fftw_complex*>(buf_out_.get()), 
-			FFTW_FORWARD, estimate? FFTW_ESTIMATE:FFTW_MEASURE);
+			estimate? FFTW_ESTIMATE:FFTW_MEASURE
+		);
 	}
 	
 public:

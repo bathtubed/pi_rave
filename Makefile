@@ -1,10 +1,10 @@
 # Device used for local testing
 BALENA_MACHINE_NAME=raspberrypi3
 APP_NAME=pi_rave
-BALENA_CMD=balena
+BALENA_CMD=sudo balena
 
 # Device name of the target
-PI_ADDRESS=192.168.1.73
+PI_ADDRESS=192.168.1.74
 
 local-test:
 	$(BALENA_CMD) push $(PI_ADDRESS)

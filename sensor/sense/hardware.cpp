@@ -29,7 +29,7 @@ short hardware::readadc(pin_t a)
 		return -1;
 	
 	unsigned char buffer[3] = {1}; // start bit
-	buffer[1] = a << 4;
+	buffer[1] = 1 << 7 | a << 4;
 	wiringPiSPIDataRW(adc_cs_, buffer, sizeof(buffer));
 	
 	return ( uint16_t(buffer[1] & 3) << 8 ) | buffer[2]; // get last 10 bits

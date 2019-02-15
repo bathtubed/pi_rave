@@ -77,32 +77,32 @@ private:
 					return difference_type(i_) - rhs.i_;
 		}
 		
-		bool operator== (const iterator_temp& other)
+		bool operator== (const iterator_temp& other) const
 		{
 			return &q_ == &other.q_ && i_ == other.i_;
 		}
 		
-		bool operator!= (const iterator_temp& other)
+		bool operator!= (const iterator_temp& other) const
 		{
-			return &q_ == &other.q_ && i_ == other.i_;
+			return &q_ != &other.q_ || i_ != other.i_;
 		}
 		
-		bool operator< (const iterator_temp& other)
+		bool operator< (const iterator_temp& other) const
 		{
 			return *this - other < 0;
 		}
 		
-		bool operator> (const iterator_temp& other)
+		bool operator> (const iterator_temp& other) const
 		{
 			return *this - other > 0;
 		}
 		
-		bool operator<= (const iterator_temp& other)
+		bool operator<= (const iterator_temp& other) const
 		{
 			return *this - other <= 0;
 		}
 		
-		bool operator>= (const iterator_temp& other)
+		bool operator>= (const iterator_temp& other) const
 		{
 			return *this - other >= 0;
 		}
@@ -203,6 +203,9 @@ public:
 	
 	//value_type& operator[] (size_type i) {return *(begin() + i);}
 	value_type operator[] (size_type i) const {return *(begin() + i);}
+	
+	auto slice(size_type from, size_type to) const
+	{return const_range_type{begin()+from, begin()+to};}
 	
 public:
 	void push_back(value_type value);

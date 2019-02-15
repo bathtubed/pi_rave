@@ -13,7 +13,7 @@ public:
 	// Represents the BCM pin numbering
 	using pin_t = uint8_t;
 	
-	enum adc_channels : pin_t {LDR = 0, N_ADCS};
+	enum adc_channels : pin_t {LDR = 0, MIC, N_ADCS};
 	
 private:
 	pin_t led_pin_;

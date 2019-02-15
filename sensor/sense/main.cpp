@@ -13,12 +13,12 @@ int main(int argc, char* argv[])
 	
 	std::cout << "Hello, world!\n";
 	
-	hardware h{18, hardware::LDR};
+	hardware h{18, hardware::MIC};
 	
-	circular_queue<short> sample_q((1 << 16) - 1);
+	circular_queue<short> sample_q((1 << 18) - 1);
 	
-	constexpr auto sample_size = 1000;
-	constexpr auto sample_period = 1ms;
+	constexpr auto sample_size = 20000;
+	constexpr auto sample_period = 50us;
 	
 	std::thread sampling([&]()
 	{
@@ -34,18 +34,21 @@ int main(int argc, char* argv[])
 	
 	while(true)
 	{
-		double avg = 0.0;
-		auto q = sample_q.begin();
-		for(int i = 0; i < sample_size; i++)
-			avg += double(*(q++)) / sample_size;
+		short max = 0, min = 1024;
 		
-		std::cout << "Average brightness: " << avg << std::endl;
-		h.set_led(avg);
+		for(auto sample : sample_q.slice(0, sample_size))
+		{
+			max = std::max(max, sample);
+			min = std::min(min, sample);
+		}
+		
+		std::cout << "Peak-to-peak: " << (max-min) << std::endl;
+		h.set_led(max-min);
 		
 		// Lose about a fifth of the samples
 		std::this_thread::sleep_for(sample_period/5);
 		
-		sample_q.pop_front(sample_q.size() - 1000);
+		sample_q.pop_front(sample_q.size() - sample_size);
 	}
 	
 	return 0;
