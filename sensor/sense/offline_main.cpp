@@ -1,5 +1,7 @@
 #include "circular_queue.h"
 #include "fft.h"
+#include "spectrum_analyzer.h"
+#include "publisher.h"
 
 #include <algorithm>
 #include <iterator>
@@ -40,7 +42,10 @@ int main()
 	
 	std::cout << std::endl;
 	
-	std::cout << "Generating impuse function:" << std::endl;
+	std::cout << "Generating fft plan..." << std::endl;
+	fft_plan fft(9);
+	
+	std::cout << "Generating impulse function:" << std::endl;
 	q.push_back(1000);
 	for(int i = 0; i < 8; i++)
 	{
@@ -49,11 +54,24 @@ int main()
 	
 	print(q);
 	
-	std::cout << "Generating fft plan..." << std::endl;
-	fft_plan fft(9);
+	std::cout << "Executing fft:" << std::endl;
+	print(fft.execute(q.begin()));
+	
+	std::cout << "Generating constant:" << std::endl;
+	for(int i = 0; i < 10; i++)
+		q.push_back(1000);
+	
+	print(q);
 	
 	std::cout << "Executing fft:" << std::endl;
 	print(fft.execute(q.begin()));
+	
+	std::cout << "Connecting to mosquitto" << std::endl;
+	
+	publisher mqtt("192.168.1.74");
+	
+	for(int i = range_t::SUB_BASS; i < range_t::N; i++)
+		mqtt.publish_freq(i, i*10 + 10);
 	
 	return 0;
 }

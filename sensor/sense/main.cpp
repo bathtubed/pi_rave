@@ -1,11 +1,17 @@
 #include "hardware.h"
 #include "circular_queue.h"
+#include "fft.h"
+#include "spectrum_analyzer.h"
+#include "publisher.h"
 
 #include <stdlib.h>
 #include <iostream>
 #include <iterator>
 #include <chrono>
 #include <thread>
+#include <array>
+#include <tuple>
+
 
 int main(int argc, char* argv[])
 {
@@ -17,10 +23,18 @@ int main(int argc, char* argv[])
 	
 	circular_queue<short> sample_q((1 << 18) - 1);
 	
-	constexpr auto sample_size = 20000;
+	constexpr auto sample_size = 1024;
 	constexpr auto sample_period = 50us;
+	constexpr auto sample_frequency = 1s / sample_period;
 	
-	std::thread sampling([&]()
+	constexpr auto publish_frequency = 50;
+	constexpr auto publish_period = 1s / publish_frequency;
+	
+	// Calculate the indecies of the frequencies we care about
+	constexpr auto freq_bins = get_freq_bins(sample_frequency, sample_size);
+	
+	// Start Sampling
+	std::thread sampling_thread([&]()
 	{
 		while(1)
 		{
@@ -28,27 +42,41 @@ int main(int argc, char* argv[])
 		}
 	});
 	
+	fft_plan fft(sample_size);
+	
+	publisher mqtt("mosquitto");
+	
 	// Wait for enough samples
 	while(sample_q.size() < sample_size)
 		std::this_thread::sleep_for(sample_size*sample_period/5);
 	
+	
+	namespace chrono = std::chrono;
+	using clock = chrono::high_resolution_clock;
+	using namespace std::chrono_literals;
+	
+	auto t = clock::now();
+	
 	while(true)
 	{
-		short max = 0, min = 1024;
+		// Perform the FFT on the previous data
+		const auto& spectrum = fft.execute(sample_q.begin());
 		
-		for(auto sample : sample_q.slice(0, sample_size))
+		// Analyze the spectrum
+		const auto amplitudes = get_amplitudes(spectrum, freq_bins);
+		
+		// Leave space
+		sample_q.pop_front(sample_q.size() - sample_size);
+		
+		h.set_led(amplitudes[range_t::BASS]);
+		
+		for(unsigned i = 0; i < amplitudes.size(); i++)
 		{
-			max = std::max(max, sample);
-			min = std::min(min, sample);
+			mqtt.publish_freq(i, amplitudes[i]);
 		}
 		
-		std::cout << "Peak-to-peak: " << (max-min) << std::endl;
-		h.set_led(max-min);
-		
-		// Lose about a fifth of the samples
-		std::this_thread::sleep_for(sample_period/5);
-		
-		sample_q.pop_front(sample_q.size() - sample_size);
+		std::this_thread::sleep_for((t + publish_period) - clock::now());
+		t += publish_period;
 	}
 	
 	return 0;

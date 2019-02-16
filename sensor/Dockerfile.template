@@ -9,18 +9,23 @@ RUN apt-get update && \
 
 WORKDIR /usr/src/app
 
+RUN git clone https://bitbucket.org/sol_prog/raspberry-pi-gcc-binary.git && \
+	cd raspberry-pi-gcc-binary && tar xf gcc-8.1.0.tar.bz2 && \
+	mv gcc-8.1.0 /usr/local && \
+	echo 'export PATH=/usr/local/gcc-8.1.0/bin:$PATH' >> ~/.bashrc && \
+	export PATH=/usr/local/gcc-8.1.0/bin:$PATH
+
 RUN git clone git://git.drogon.net/wiringPi && \
 	cd wiringPi && \
 	git pull origin && \
 	WIRINGPI_SUDO=env ./build && \
 	cd ..
 
-
 COPY start.sh ./start.sh
 
 COPY ./sense ./sense
 
-RUN cd sense && make install && make clean && cd ..
+RUN cd sense && CXX=/usr/local/gcc-8.1.0/bin/g++-8.1.0 make install && make clean && cd ..
 
 ENV INITSYSTEM on
 CMD ["bash", "start.sh"]

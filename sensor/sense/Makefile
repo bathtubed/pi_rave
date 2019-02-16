@@ -1,7 +1,9 @@
 # This file has has two main targets. Code which can be built portably, and
 # code which will really only run on the pi.
 
-CXX=g++
+ifndef CXX
+  CXX=g++
+endif
 
 COMMONFLAGS=-Wall -std=c++17
 ifdef NONRPI
@@ -16,9 +18,9 @@ else
   LIBS = -lwiringPi -lmosquitto -lmosquittopp -lrt -lfftw3 -lm -lpthread -Wl,-rpath=/opt/vc/lib
 endif
 
-COMMON_SOURCES=circular_queue.cpp
+COMMON_SOURCES=circular_queue.cpp fft.cpp spectrum_analyzer.cpp publisher.cpp
 ifdef NONRPI
-  SOURCES=$(COMMON_SOURCES) offline_main.cpp fft.cpp
+  SOURCES=$(COMMON_SOURCES) offline_main.cpp 
 else
   SOURCES=$(COMMON_SOURCES) main.cpp hardware.cpp
 endif

@@ -15,7 +15,7 @@ namespace transform_types
 	};
 	
 	using samp_t = double;
-	using freq_t = std::complex<prec_t>;
+	using freq_t = std::complex<samp_t>;
 	
 	template<typename T>
 	using data_t = std::unique_ptr<T[], fftw_data_deleter>;
@@ -36,21 +36,22 @@ public:
 	transform(unsigned len);
 	
 public:
-	samp_t* begin() {return get();}
-	samp_t* end() {return get() + len_;}
+	value_type* begin() {return this->get();}
+	value_type* end() {return this->get() + len_;}
 	
-	const samp_t* begin() const {return get();}
-	const samp_t* end() const {return get() + len_;}
+	const value_type* begin() const {return this->get();}
+	const value_type* end() const {return this->get() + len_;}
 };
 
 template<>
-transform<transform_types::samp_t>::transform(unsigned len):
+inline transform<transform_types::samp_t>::transform(unsigned len):
 	data_t(fftw_alloc_real(len)), len_(len) {}
 
 
 template<>
-transform<transform_types::freq_t>::transform(unsigned len):
-	data_t(reinterpret_cast<freq_t*>(fftw_alloc_complex(len))), len_(len) {}
+inline transform<transform_types::freq_t>::transform(unsigned len):
+	data_t(reinterpret_cast<transform_types::freq_t*>(fftw_alloc_complex(len)))
+	, len_(len) {}
 
 using time_domain = transform<transform_types::samp_t>;
 using freq_domain = transform<transform_types::freq_t>;
@@ -74,7 +75,7 @@ public:
 	{
 		return fftw_plan_dft_r2c_1d(
 			n_, 
-			reinterpret_cast<fftw_complex*>(buf_in_.get()),
+			reinterpret_cast<double*>(buf_in_.get()),
 			reinterpret_cast<fftw_complex*>(buf_out_.get()), 
 			estimate? FFTW_ESTIMATE:FFTW_MEASURE
 		);
@@ -82,7 +83,7 @@ public:
 	
 public:
 	template<typename InputIter>
-	const transform& execute(InputIter from)
+	const auto& execute(InputIter from)
 	{
 		std::copy_n(from, n_, buf_in_.begin());
 		fftw_execute(plan_);
