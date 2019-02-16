@@ -36,11 +36,11 @@ short hardware::readadc(pin_t a)
 }
 
 // Instantiates here to achieve max throughput
-void hardware::sample(short* buffer,
+bool hardware::sample(short* buffer,
 					  unsigned n_samples,
 					  std::chrono::microseconds sample_us)
 {
-	sample<short*>(buffer, n_samples, sample_us);
+	return sample<short*>(buffer, n_samples, sample_us);
 }
 
 hardware::~hardware()

@@ -29,9 +29,9 @@ public:
 	short readadc(pin_t a);
 	
 	template<typename IterT, typename TimeT>
-	void sample(IterT dest, unsigned n_samples, TimeT sample_dur);
+	bool sample(IterT dest, unsigned n_samples, TimeT sample_dur);
 	
-	void sample(short* buffer, 
+	bool sample(short* buffer, 
 				unsigned n_samples,
 				std::chrono::microseconds sample_us);
 	
@@ -39,19 +39,24 @@ public:
 
 // Generic timed sampling code
 template<typename IterT, typename TimeT>
-void hardware::sample(IterT dest, size_t n_samples, TimeT sample_dur)
+bool hardware::sample(IterT dest, size_t n_samples, TimeT sample_dur)
 {
 	namespace chrono = std::chrono;
 	using clock = chrono::high_resolution_clock;
 	using namespace std::chrono_literals;
 	
 	auto t = clock::now();
+	bool caught_up = true;
 	for(size_t i = 0; i < n_samples; i++)
 	{
 		*(dest++) = readadc(mic_pin_);
+		if((t + sample_dur) < clock::now()) caught_up = false;
+		
 		std::this_thread::sleep_for((t + sample_dur) - clock::now());
 		t += sample_dur;
 	}
+	
+	return caught_up;
 }
 
 #endif // _HARDWARE_H_

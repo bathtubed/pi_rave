@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
 	circular_queue<short> sample_q((1 << 18) - 1);
 	
 	constexpr auto sample_size = 1024;
-	constexpr auto sample_period = 50us;
+	constexpr auto sample_period = 100us;
 	constexpr auto sample_frequency = 1s / sample_period;
 	
 	constexpr auto publish_frequency = 50;
@@ -36,9 +36,11 @@ int main(int argc, char* argv[])
 	// Start Sampling
 	std::thread sampling_thread([&]()
 	{
+		h.set_led(0);
 		while(1)
 		{
-			h.sample(std::back_inserter(sample_q), sample_size, sample_period);
+			if(!h.sample(std::back_inserter(sample_q), sample_size, sample_period))
+				h.set_led(1000);
 		}
 	});
 	
@@ -67,8 +69,6 @@ int main(int argc, char* argv[])
 		
 		// Leave space
 		sample_q.pop_front(sample_q.size() - sample_size);
-		
-		h.set_led(amplitudes[range_t::BASS]);
 		
 		for(unsigned i = 0; i < amplitudes.size(); i++)
 		{
