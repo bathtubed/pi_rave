@@ -2,4 +2,9 @@
 
 echo "This is running"
 
-sense
+if [ -f /var/run/pigpio.pid ]
+then
+	rm /var/run/pigpio.pid
+fi
+
+exec sense

@@ -23,7 +23,7 @@ int main()
 	print(q);
 	
 	for(auto i = 0; i < 3; i++)
-		std::cout << q.pop_front() << " ";
+		std::cout << q.pop() << " ";
 	
 	std::cout << std::endl;
 	print(q);

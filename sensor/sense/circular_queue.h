@@ -4,6 +4,7 @@
 #include <vector>
 #include <cassert>
 #include <iterator>
+#include <type_traits>
 
 template<typename IterT>
 class range
@@ -41,7 +42,8 @@ private:
 	template<typename CQ>
 	class iterator_temp: public std::iterator<
 							std::random_access_iterator_tag,
-							decltype(std::declval<CQ>().front())>
+							std::remove_reference_t<
+								decltype(std::declval<CQ>().front())>>
 	{
 	public:
 		using value_type = decltype(std::declval<CQ>().front());
@@ -179,8 +181,8 @@ private:
 	volatile size_type stop_;
 	
 public:
-	circular_queue(size_type buf_size):
-		data_(buf_size), capacity_(buf_size), start_(0), stop_(0)
+	circular_queue(size_type buf_size, const T &init = T()):
+		data_(buf_size, init), capacity_(buf_size), start_(0), stop_(0)
 	{
 	}
 	
@@ -192,26 +194,29 @@ public:
 	contig_range_type array_one() const;
 	contig_range_type array_two() const;
 	
-	//iterator begin() {return {*this, start_};}
+	iterator begin() {return {*this, start_};}
 	const_iterator begin() const {return const_iterator{*this, start_};}
 	
-	//iterator end() {return {*this, stop_};}
+	iterator end() {return {*this, stop_};}
 	const_iterator end() const {return const_iterator{*this, stop_};}
 	
-	value_type front() const {return *begin();}
-	value_type back() const {return *(end() - 1);}
 	
-	//value_type& operator[] (size_type i) {return *(begin() + i);}
-	value_type operator[] (size_type i) const {return *(begin() + i);}
+	value_type& front() {return *begin();}
+	const value_type& front() const {return *begin();}
+	
+	value_type& back() {return *(end() - 1);}
+	const value_type& back() const {return *(end() - 1);}
 	
 	auto slice(size_type from, size_type to) const
 	{return const_range_type{begin()+from, begin()+to};}
 	
 public:
+	void push_back();
 	void push_back(value_type value);
 	
-	void pop_front(int len) {shift_right(start_, len);}
-	value_type pop_front();
+	void pop_some(int len) {shift_right(start_, len);}
+	void pop_front() {shift_right(start_);}
+	[[nodiscard]] value_type pop();
 	
 private:
 	size_type shift_right(size_type& i, size_type len = 1) const
@@ -263,10 +268,8 @@ auto circular_queue<T>::array_two() const -> contig_range_type
 }
 
 template<typename T>
-void circular_queue<T>::push_back(T value)
+void circular_queue<T>::push_back()
 {
-	data_[stop_] = std::move(value);
-	
 	if(size() == capacity_ - 1)
 	{
 		shift_right(stop_);
@@ -279,10 +282,17 @@ void circular_queue<T>::push_back(T value)
 }
 
 template<typename T>
-auto circular_queue<T>::pop_front() -> value_type
+void circular_queue<T>::push_back(T value)
+{
+	data_[stop_] = std::move(value);
+	push_back();
+}
+
+template<typename T>
+auto circular_queue<T>::pop() -> value_type
 {
 	auto ret = front();
-	pop_front(1);
+	pop_front();
 	return ret;
 }
 

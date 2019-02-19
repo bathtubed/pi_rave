@@ -9,13 +9,13 @@ COMMONFLAGS=-Wall -std=c++17
 ifdef NONRPI
   CXXFLAGS=$(COMMONFLAGS) -g
 else
-  CXXFLAGS=$(COMMONFLAGS) -I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host -I/opt/vc/include/interface/vmcs_host/linux -L/opt/vc/lib
+  CXXFLAGS=$(COMMONFLAGS) -O3 -I/opt/vc/include -I/opt/vc/include/interface/vcos/pthreads -I/opt/vc/include/interface/vmcs_host -I/opt/vc/include/interface/vmcs_host/linux -L/opt/vc/lib
 endif
 
 ifdef NONRPI
   LIBS = -lfftw3 -lm -lmosquitto -lmosquittopp -lpthread
 else
-  LIBS = -lwiringPi -lmosquitto -lmosquittopp -lrt -lfftw3 -lm -lpthread -Wl,-rpath=/opt/vc/lib
+  LIBS = -lpigpio -lmosquitto -lmosquittopp -lrt -lfftw3 -lm -lpthread -Wl,-rpath=/opt/vc/lib
 endif
 
 COMMON_SOURCES=circular_queue.cpp fft.cpp spectrum_analyzer.cpp publisher.cpp
@@ -26,6 +26,7 @@ else
 endif
 
 BUILD_DIR=build
+BUILD_MARKER=$(BUILD_DIR)/.iaminfactinthebuilddirectory
 
 ifndef INSTALL_LOCATION 
   INSTALL_LOCATION=/usr/local/bin
@@ -41,10 +42,11 @@ all: $(EXE_FILE)
 $(EXE_FILE): $(OBJS)
 	$(CXX) -o $@ $(OBJS) $(LIBS) $(CXXFLAGS)
 
-build:
-	mkdir build
+$(BUILD_MARKER):
+	mkdir $(BUILD_DIR)
+	touch $(BUILD_MARKER)
 
-build/%.o: %.cpp build
+$(BUILD_DIR)/%.o: %.cpp $(BUILD_MARKER)
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
 
 install: $(EXE_FILE)

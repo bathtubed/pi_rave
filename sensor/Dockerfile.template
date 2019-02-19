@@ -2,10 +2,13 @@ FROM balenalib/%%BALENA_MACHINE_NAME%%-debian-python
 
 COPY ./firmware/hardfp/opt/vc /opt
 
-RUN apt-get update && \
-	apt-get install -yq build-essential git \
-		libmosquittopp-dev libmosquitto-dev libfftw3-dev && \
-	apt-get clean && rm -rf /var/lib/apt/lists/*
+RUN apt-get update
+
+RUN apt-get install -yq build-essential wget git unzip
+RUN apt-get install -yq libmosquittopp-dev libmosquitto-dev
+RUN apt-get install -yq libfftw3-dev
+
+RUN apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /usr/src/app
 
@@ -15,17 +18,20 @@ RUN git clone https://bitbucket.org/sol_prog/raspberry-pi-gcc-binary.git && \
 	echo 'export PATH=/usr/local/gcc-8.1.0/bin:$PATH' >> ~/.bashrc && \
 	export PATH=/usr/local/gcc-8.1.0/bin:$PATH
 
-RUN git clone git://git.drogon.net/wiringPi && \
-	cd wiringPi && \
-	git pull origin && \
-	WIRINGPI_SUDO=env ./build && \
+RUN wget abyz.me.uk/rpi/pigpio/pigpio.zip && \
+	unzip pigpio.zip && \
+	cd PIGPIO && \
+	make && \
+	make install && \
 	cd ..
 
-COPY start.sh ./start.sh
 
 COPY ./sense ./sense
 
 RUN cd sense && CXX=/usr/local/gcc-8.1.0/bin/g++-8.1.0 make install && make clean && cd ..
 
 ENV INITSYSTEM on
-CMD ["bash", "start.sh"]
+
+COPY start.sh ./start.sh
+
+CMD sense

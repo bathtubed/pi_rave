@@ -1,55 +1,57 @@
+#define HARDWARE_CPP
 #include "hardware.h"
 
-#include <wiringPi.h>
-#include <wiringPiSPI.h>
+#include <pigpio.h>
 
 #include <stdexcept>
 
-constexpr auto spi_rate = 1000000;
+constexpr auto spi_rate = 2000000;
 
-hardware::hardware(pin_t led_pin, pin_t mic_pin, pin_t adc_cs):
-	led_pin_(led_pin), mic_pin_(mic_pin), adc_cs_(adc_cs)
+hardware::hardware(pin_t led_pin, pin_t adc_cs):
+	led_pin_(led_pin), adc_cs_(adc_cs)
 {
-	if(wiringPiSetupGpio() < 0)
+	if(gpioInitialise() < 0)
 	{
-		throw std::runtime_error("Setup of wiringPi failed");
+		throw std::runtime_error("Setup of pigpio failed");
 	}
 	
-	if(wiringPiSPISetup(adc_cs_, 1000000) < 0)
+	if((spi_ = spiOpen(adc_cs_, spi_rate, 0)) < 0)
 	{
 		throw std::runtime_error("Setup of SPI failed");
 	}
 	
-	pinMode(led_pin_, PWM_OUTPUT);
+	gpioSetMode(led_pin_, PI_OUTPUT);
 }
 
-short hardware::readadc(pin_t a)
+void hardware::read_adc(const adc_buffer_t &tx, adc_buffer_t* rx) noexcept
 {
-	if(a > N_ADCS)
-		return -1;
+	constexpr auto count = std::tuple_size<adc_buffer_t>::value;
 	
-	unsigned char buffer[3] = {1}; // start bit
-	buffer[1] = 1 << 7 | a << 4;
-	wiringPiSPIDataRW(adc_cs_, buffer, sizeof(buffer));
-	
-	return ( uint16_t(buffer[1] & 3) << 8 ) | buffer[2]; // get last 10 bits
+	spiXfer(
+		spi_,
+		const_cast<char*>(tx.data()),
+		rx->data(),
+		count
+	);
 }
 
-// Instantiates here to achieve max throughput
-bool hardware::sample(short* buffer,
-					  unsigned n_samples,
-					  std::chrono::microseconds sample_us)
+std::chrono::microseconds hardware::delay(std::chrono::microseconds dur) noexcept
 {
-	return sample<short*>(buffer, n_samples, sample_us);
+	return std::chrono::microseconds(gpioDelay(dur.count()));
+}
+
+std::chrono::microseconds hardware::tick() noexcept
+{
+	return std::chrono::microseconds(gpioTick());
 }
 
 hardware::~hardware()
 {
-	pinMode(led_pin_, OUTPUT);
-	digitalWrite(led_pin_, 0);
+	gpioWrite(led_pin_, 0);
+	gpioTerminate();
 }
 
-void hardware::set_led(short brightness)
+void hardware::set_led(unsigned int brightness) noexcept
 {
-	pwmWrite(led_pin_, brightness);
+	gpioHardwarePWM(led_pin_, 1000, brightness);
 }
