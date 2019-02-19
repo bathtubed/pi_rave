@@ -172,13 +172,14 @@ public:
 	
 private:
 	using storage_type = std::vector<T>;
+	using bound_type = volatile size_type;
 	
 private:
 	// DATA
 	storage_type data_;
 	size_type capacity_;
-	volatile size_type start_;
-	volatile size_type stop_;
+	bound_type start_;
+	bound_type stop_;
 	
 public:
 	circular_queue(size_type buf_size, const T &init = T()):
@@ -224,7 +225,7 @@ private:
 		return i = (i+len) % capacity();
 	}
 	
-	size_type shift_right(volatile size_type& i, size_type len = 1) const
+	size_type shift_right(bound_type& i, size_type len = 1) const
 	{
 		return i = (i+len) % capacity();
 	}
@@ -234,7 +235,7 @@ private:
 		return shift_right(i, -len);
 	}
 	
-	size_type shift_left(volatile size_type& i, size_type len = 1) const
+	size_type shift_left(bound_type& i, size_type len = 1) const
 	{
 		return shift_right(i, -len);
 	}

@@ -45,11 +45,13 @@ int main(int argc, char* argv[])
 	sigaction(SIGTERM, &action, NULL);
 	sigaction(SIGABRT, &action, NULL);
 	
-	constexpr auto sample_size = 1024;
-	constexpr auto sample_period = 100us;
+	constexpr auto chunk_size = 256;
+	constexpr auto chunks_per_sample = 4;
+	constexpr auto sample_size = chunk_size * chunks_per_sample;
+	constexpr auto sample_period = 50us;
 	constexpr auto sample_frequency = 1s / sample_period;
 	
-	using sample_chunk_t = std::array<hardware::sample_t, sample_size>;
+	using sample_chunk_t = std::array<hardware::sample_t, chunk_size>;
 	
 	constexpr auto publish_frequency = 50;
 	constexpr auto publish_period = 1000000us / publish_frequency;
@@ -60,7 +62,7 @@ int main(int argc, char* argv[])
 	
 	sample_chunk_t init{0};
 	// God forbid we're ever behind by 100.
-	circular_queue<sample_chunk_t> sample_q(100, init);
+	circular_queue<sample_chunk_t> chunk_q(100, init);
 	
 	// Measure overhead of a single sample
 	{
@@ -92,12 +94,12 @@ int main(int argc, char* argv[])
 		std::cout << "Beginning Sample" << std::endl;
 		while(running)
 		{
-			sample_chunk_t& next = *sample_q.end();
+			sample_chunk_t& next = *chunk_q.end();
 			const auto missed = h.sample<hardware::MIC>(
-				next.data(), sample_size, sample_period);
-			sample_q.push_back();
+				next.data(), chunk_size, sample_period);
+			chunk_q.push_back();
 			
-			h.set_led(missed * 1000000 / sample_size);
+			h.set_led(missed * 1000000 / chunk_size);
 		}
 	});
 	
@@ -109,18 +111,33 @@ int main(int argc, char* argv[])
 	
 	auto t = clk::now();
 	
+	// Stores the previous values we care about in a queue.
+	circular_queue<short> sample_q(sample_size+1, 0);
+	
+	// Wait for enough samples
+	while(chunk_q.size() < chunk_size && running)
+		std::this_thread::sleep_for(chunk_size*sample_period);
+	
 	while(running)
 	{
-		// Wait for enough samples
-		while(sample_q.size() < 1 && running)
-			std::this_thread::sleep_for(sample_size*sample_period/5);
+		// Process the data
+		for(auto& chunk : chunk_q)
+		{
+			for(short samp : chunk)
+			{
+				if(samp == 0)
+					sample_q.push_back(sample_q.back());  // interpolating
+				else
+					sample_q.push_back(sample);
+			}
+			
+			// reset the chunk
+			chunk.fill(0);
+			chunk_q.pop_front();
+		}
 		
 		// Perform the FFT on the previous data
-		const auto& spectrum = fft.execute(sample_q.front().begin());
-		for(auto s : sample_q.slice(0, sample_q.size()))
-			s.fill(0);
-		
-		sample_q.pop_some(sample_q.size());
+		const auto& spectrum = fft.execute(sample_q.begin());
 		
 		// Analyze the spectrum
 		const auto amplitudes = get_amplitudes(spectrum, freq_bins);

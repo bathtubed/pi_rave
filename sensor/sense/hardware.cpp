@@ -5,7 +5,7 @@
 
 #include <stdexcept>
 
-constexpr auto spi_rate = 2000000;
+constexpr auto spi_rate = 1000000;
 
 hardware::hardware(pin_t led_pin, pin_t adc_cs):
 	led_pin_(led_pin), adc_cs_(adc_cs)
