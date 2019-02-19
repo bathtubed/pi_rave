@@ -34,4 +34,4 @@ ENV INITSYSTEM on
 
 COPY start.sh ./start.sh
 
-CMD sense
+CMD ["sense"]
