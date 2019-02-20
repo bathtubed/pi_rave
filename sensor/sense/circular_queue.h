@@ -5,6 +5,9 @@
 #include <cassert>
 #include <iterator>
 #include <type_traits>
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 
 template<typename IterT>
 class range
@@ -29,6 +32,25 @@ public:
 public:
 	constexpr auto& operator[] (size_type i) {return *(start_ + i);}
 	constexpr const auto& operator[] (size_type i) const {return *(start_ + i);}
+};
+
+template<typename ContainerT>
+class front_consumer: public std::iterator<
+						std::input_iterator_tag,
+						std::remove_reference_t<
+							decltype(std::declval<ContainerT>().front())>>
+{
+	ContainerT& container_;
+	
+public:
+	constexpr front_consumer(ContainerT& container): container_(container) {}
+	
+public:
+	constexpr decltype(auto) operator* () const {return container_.front();}
+	constexpr decltype(auto) operator*() {return container_.front();}
+	
+	constexpr front_consumer& operator++ () {container_.pop_front(); return *this;}
+	constexpr front_consumer& operator++ (int) {return ++(*this);}
 };
 
 template<typename T>
@@ -172,7 +194,7 @@ public:
 	
 private:
 	using storage_type = std::vector<T>;
-	using bound_type = volatile size_type;
+	using bound_type = std::atomic<size_type>;
 	
 private:
 	// DATA
@@ -180,6 +202,8 @@ private:
 	size_type capacity_;
 	bound_type start_;
 	bound_type stop_;
+	std::condition_variable has_data_;
+	std::mutex mt_;
 	
 public:
 	circular_queue(size_type buf_size, const T &init = T()):
@@ -201,9 +225,9 @@ public:
 	iterator end() {return {*this, stop_};}
 	const_iterator end() const {return const_iterator{*this, stop_};}
 	
-	
-	value_type& front() {return *begin();}
-	const value_type& front() const {return *begin();}
+	value_type& front();
+	const value_type& front() const
+	{return const_cast<circular_queue*>(this).front();}
 	
 	value_type& back() {return *(end() - 1);}
 	const value_type& back() const {return *(end() - 1);}
@@ -269,12 +293,29 @@ auto circular_queue<T>::array_two() const -> contig_range_type
 }
 
 template<typename T>
+auto circular_queue<T>::front() -> value_type&
+{
+	if(size() == 0)
+	{
+		std::unique_lock<std::mutex> lk(mt_);
+		has_data_.wait(lk, [this]{return size();});
+	}
+	
+	return *begin();
+}
+
+template<typename T>
 void circular_queue<T>::push_back()
 {
 	if(size() == capacity_ - 1)
 	{
 		shift_right(stop_);
 		shift_right(start_);
+	}
+	else if(size() == 0)
+	{
+		shift_right(stop_);
+		has_data_.notify_one();  // notify the consumer
 	}
 	else
 	{

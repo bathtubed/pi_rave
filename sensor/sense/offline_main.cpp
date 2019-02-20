@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <iterator>
 #include <iostream>
+#include <thread>
 
 int main()
 {
@@ -24,6 +25,21 @@ int main()
 	
 	for(auto i = 0; i < 3; i++)
 		std::cout << q.pop() << " ";
+	
+	std::cout << std::endl;
+	
+	auto t = std::thread([&q]
+	{
+		for(auto i = 0; i < 3; i++)
+		{
+			std::cout << "Pushing " << i << std::endl;
+			q.push_back(i);
+			std::this_thread::sleep_for(std::chrono::seconds(3));
+		}
+	});
+	
+	std::copy_n(front_consumer(q), 5,
+				std::ostream_iterator<decltype(q.front())>(std::cout, "\n"));
 	
 	std::cout << std::endl;
 	print(q);
