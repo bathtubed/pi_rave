@@ -55,7 +55,7 @@ int main(int argc, char* argv[])
 	
 	using sample_chunk_t = std::array<hardware::sample_t, chunk_size>;
 	
-	constexpr auto publish_frequency = 30;
+	constexpr auto publish_frequency = 1;
 	constexpr auto publish_period = 1000000us / publish_frequency;
 	
 	std::cout << "Hello, world! (sample frequency = " << sample_frequency << "Hz)\n";
